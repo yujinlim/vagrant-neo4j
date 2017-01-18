@@ -1,0 +1,37 @@
+- name: web.yml | setup neo4j
+  hosts: all
+  become: true
+
+  tasks:
+    - name: allow for silent install of java8 from oracle-java8
+      shell: echo "oracle-java8-installer shared/accepted-oracle-license-v1-1 select true" | debconf-set-selections
+    - name: add java
+      apt_repository:
+        repo: 'ppa:webupd8team/java'
+        state: present
+    - name: install java
+      apt:
+        name: oracle-java8-installer
+        state: latest
+    - name: add neo4j key
+      apt_key:
+        url: "https://debian.neo4j.org/neotechnology.gpg.key"
+        state: present
+    - name: update neo4j source list
+      blockinfile:
+        create: yes
+        dest: /etc/apt/sources.list.d/neo4j.list
+        block: |
+          deb http://debian.neo4j.org/repo stable/
+    - name: install neo4j
+      apt:
+        update_cache: yes
+        name: neo4j=3.1.0
+        state: present
+    - name: update conf for neo4j to enable binding
+      lineinfile:
+        dest: /etc/neo4j/neo4j.conf
+        regexp: 'dbms.connectors.default_listen_address'
+        line: 'dbms.connectors.default_listen_address=0.0.0.0'
+    - name: restart neo4j
+      shell: neo4j restart
